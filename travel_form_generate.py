@@ -50,12 +50,15 @@ def generate_signature_image(text, width=600, height=120, scale_factor=3):
     draw = ImageDraw.Draw(img)
     
     # Try to use a cursive/signature-style font, fallback to default
+    # Include more common paths and try PIL's built-in fonts
     font_paths = [
         '/System/Library/Fonts/Supplemental/SnellRoundhand.ttc',  # macOS
         '/System/Library/Fonts/Supplemental/Chalkduster.ttf',    # macOS alternative
         'C:/Windows/Fonts/brushsc.ttf',                           # Windows
         'C:/Windows/Fonts/BRUSHSCI.TTF',                          # Windows
         '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf', # Linux
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf', # Linux alternative
+        '/usr/share/fonts/truetype/noto/NotoSans-Italic.ttf',     # Linux alternative
     ]
     
     # Start with larger font size (scale it too)
@@ -68,36 +71,78 @@ def generate_signature_image(text, width=600, height=120, scale_factor=3):
             font = ImageFont.truetype(font_path, font_size)
             font_path_used = font_path
             break
-        except:
+        except (OSError, IOError, Exception):
             continue
     
+    # If no system font found, try to use PIL's default font or create a simple signature style
     if font is None:
-        # Try to get a default italic font
         try:
-            font = ImageFont.truetype("arial.ttf", font_size)
+            # Try common font names that might be available
+            import platform
+            system = platform.system()
+            if system == 'Windows':
+                # Try Windows common fonts
+                for font_name in ['arial', 'calibri', 'times']:
+                    try:
+                        font = ImageFont.truetype(f"{font_name}.ttf", font_size)
+                        font_path_used = font_name
+                        break
+                    except:
+                        continue
+            elif system == 'Linux':
+                # Try Linux common fonts
+                for font_path_linux in [
+                    '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+                    '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+                ]:
+                    try:
+                        font = ImageFont.truetype(font_path_linux, font_size)
+                        font_path_used = font_path_linux
+                        break
+                    except:
+                        continue
         except:
-            font = ImageFont.load_default()
-            font_size = 36 * scale_factor
+            pass
+        
+        # Final fallback: use PIL's default font
+        if font is None:
+            try:
+                # Try to load default font with larger size
+                font = ImageFont.load_default()
+                font_size = 36 * scale_factor
+            except:
+                # Ultimate fallback
+                font = ImageFont.load_default()
+                font_size = 36 * scale_factor
     
     # Calculate text dimensions first
-    bbox = draw.textbbox((0, 0), text, font=font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
+    try:
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+    except:
+        # Fallback if textbbox fails
+        text_width = len(text) * font_size * 0.6
+        text_height = font_size * 1.2
     
     # Adjust font size if text is too wide to fit in available width
     min_font_size = 30 * scale_factor
     while text_width > scaled_width - (40 * scale_factor) and font_size > min_font_size:
         font_size -= 3 * scale_factor
         try:
-            if font_path_used:
+            if font_path_used and font_path_used not in ['arial', 'calibri', 'times']:
                 font = ImageFont.truetype(font_path_used, font_size)
             else:
                 font = ImageFont.load_default()
         except:
             font = ImageFont.load_default()
-        bbox = draw.textbbox((0, 0), text, font=font)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
+        try:
+            bbox = draw.textbbox((0, 0), text, font=font)
+            text_width = bbox[2] - bbox[0]
+            text_height = bbox[3] - bbox[1]
+        except:
+            text_width = len(text) * font_size * 0.6
+            text_height = font_size * 1.2
     
     # Calculate position (left-aligned with padding, vertically centered)
     padding = 20 * scale_factor
@@ -105,7 +150,24 @@ def generate_signature_image(text, width=600, height=120, scale_factor=3):
     y = (scaled_height - text_height) / 2
     
     # Draw the signature text in black with antialiasing
-    draw.text((x, y), text, fill=(0, 0, 0), font=font)
+    try:
+        draw.text((x, y), text, fill=(0, 0, 0), font=font)
+    except Exception as e:
+        # If font drawing fails, try with default font
+        try:
+            font = ImageFont.load_default()
+            draw.text((x, y), text, fill=(0, 0, 0), font=font)
+            # Recalculate dimensions with default font
+            try:
+                bbox = draw.textbbox((0, 0), text, font=font)
+                text_width = bbox[2] - bbox[0]
+                text_height = bbox[3] - bbox[1]
+            except:
+                text_width = len(text) * font_size * 0.6
+                text_height = font_size * 1.2
+        except:
+            # Ultimate fallback - draw text without font specification
+            draw.text((x, y), text, fill=(0, 0, 0))
     
     # Add a thicker underline for signature effect (also scaled)
     line_y = y + text_height + (8 * scale_factor)
