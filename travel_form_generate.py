@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from PIL import Image as PILImage, ImageDraw, ImageFont
 import base64
 import urllib.request
+import re
 
 # Page configuration
 st.set_page_config(page_title="Georgetown Travel Form Generator", page_icon="✈️", layout="wide")
@@ -37,22 +38,52 @@ def pad_to_length(items, length, pad_value=''):
     return items
 
 def number_text_input(label, key, value=0.0, min_value=0.0, placeholder="0.00"):
-    """Text input that accepts numeric values only, with validation."""
+    """Text input that accepts numeric values only, with validation.
+    Returns the numeric value and shows inline warnings if invalid."""
     # Initialize session state if not exists
     if key not in st.session_state:
         st.session_state[key] = str(value) if value else ""
     
+    # Track validation state for this specific input
+    validation_key = f"{key}_has_error"
+    
     text_val = st.text_input(label, key=key, placeholder=placeholder)
-    try:
-        if text_val and text_val.strip():
-            num_val = float(text_val)
-            if num_val < min_value:
-                num_val = min_value
-            return num_val
-        else:
-            return 0.0
-    except (ValueError, AttributeError):
+    
+    # If empty, return 0.0 (no validation needed, clear any previous errors)
+    if not text_val or not text_val.strip():
+        st.session_state[validation_key] = False
         return 0.0
+    
+    # Try to extract numeric value from input
+    # Remove common non-numeric characters like $, commas, spaces, etc.
+    cleaned_text = text_val.strip().replace('$', '').replace(',', '').replace(' ', '')
+    
+    # Try to parse as float
+    has_error = False
+    error_message = None
+    try:
+        num_val = float(cleaned_text)
+        if num_val < min_value:
+            num_val = min_value
+        # Input is valid, clear error state
+        st.session_state[validation_key] = False
+        return num_val
+    except (ValueError, AttributeError):
+        # Check if there are any invalid characters
+        # Allow: integers, decimals, negative numbers
+        if not re.match(r'^-?\d+(\.\d+)?$', cleaned_text):
+            has_error = True
+            error_message = "⚠️ Invalid input. Please enter a valid number."
+    
+    # Update error state
+    st.session_state[validation_key] = has_error
+    
+    # Show warning inline if there's an error
+    if has_error and error_message:
+        st.warning(error_message)
+        return 0.0
+    
+    return 0.0
 
 def generate_signature_image(text, width=600, height=120, scale_factor=3):
     """Generate a signature-style image from text with high resolution"""
@@ -1181,6 +1212,22 @@ def main():
             
             if missing_fields:
                 st.warning(f"⚠️ Please fill in all required fields: {', '.join(missing_fields)}")
+                st.stop()
+            
+            # Check for any input validation errors (check all number inputs)
+            has_validation_errors = False
+            # Check all input keys that might have errors
+            input_prefixes = ['mileage_', 'airfare_', 'ground_', 'parking_', 'lodging_', 'baggage_', 'misc_', 'misc2_']
+            for key in st.session_state.keys():
+                if key.endswith('_has_error') and st.session_state[key]:
+                    # Check if this is one of our input fields
+                    base_key = key.replace('_has_error', '')
+                    if any(base_key.startswith(prefix) for prefix in input_prefixes):
+                        has_validation_errors = True
+                        break
+            
+            if has_validation_errors:
+                st.warning("⚠️ **Cannot generate PDF: Please fix all invalid input fields above.**")
                 st.stop()
             # Calculate totals
             total_airfare = sum(airfare)
