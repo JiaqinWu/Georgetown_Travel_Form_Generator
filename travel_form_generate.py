@@ -36,6 +36,24 @@ def pad_to_length(items, length, pad_value=''):
         items.extend([pad_value] * (length - len(items)))
     return items
 
+def number_text_input(label, key, value=0.0, min_value=0.0, placeholder="0.00"):
+    """Text input that accepts numeric values only, with validation."""
+    # Initialize session state if not exists
+    if key not in st.session_state:
+        st.session_state[key] = str(value) if value else ""
+    
+    text_val = st.text_input(label, key=key, placeholder=placeholder)
+    try:
+        if text_val and text_val.strip():
+            num_val = float(text_val)
+            if num_val < min_value:
+                num_val = min_value
+            return num_val
+        else:
+            return 0.0
+    except (ValueError, AttributeError):
+        return 0.0
+
 def generate_signature_image(text, width=600, height=120, scale_factor=3):
     """Generate a signature-style image from text with high resolution"""
     if not text or not text.strip():
@@ -1041,7 +1059,7 @@ def main():
                     i = chunk_start + offset
                     with cols[offset]:
                         mileage_dates.append(st.text_input(f"Day {i+1}", key=f"mileage_date_{i}", placeholder="MM/DD/YY"))
-                        mileage_amounts.append(st.number_input(f"Miles Day {i+1}", min_value=0.0, value=0.0, step=1.0, key=f"mileage_{i}"))
+                        mileage_amounts.append(number_text_input(f"Miles Day {i+1}", key=f"mileage_{i}", value=0.0, placeholder="0"))
             
             total_mileage = sum([m * 0.70 for m in mileage_amounts if m])
             
@@ -1062,11 +1080,11 @@ def main():
                     i = chunk_start + offset
                     with cols[offset]:
                         expense_dates.append(st.text_input(f"Day {i+1}", key=f"expense_date_{i}", placeholder="MM/DD/YY"))
-                        airfare.append(st.number_input(f"Airfare Day {i+1}", min_value=0.0, value=0.0, step=1.0, key=f"airfare_{i}", format="%.2f"))
-                        ground_transport.append(st.number_input(f"Ground Trans Day {i+1}", min_value=0.0, value=0.0, step=1.0, key=f"ground_{i}", format="%.2f"))
-                        parking.append(st.number_input(f"Parking Day {i+1}", min_value=0.0, value=0.0, step=1.0, key=f"parking_{i}", format="%.2f"))
-                        lodging.append(st.number_input(f"Lodging Day {i+1}", min_value=0.0, value=0.0, step=1.0, key=f"lodging_{i}", format="%.2f"))
-                        baggage.append(st.number_input(f"Baggage Day {i+1}", min_value=0.0, value=0.0, step=1.0, key=f"baggage_{i}", format="%.2f"))
+                        airfare.append(number_text_input(f"Airfare Day {i+1}", key=f"airfare_{i}", value=0.0, placeholder="0.00"))
+                        ground_transport.append(number_text_input(f"Ground Trans Day {i+1}", key=f"ground_{i}", value=0.0, placeholder="0.00"))
+                        parking.append(number_text_input(f"Parking Day {i+1}", key=f"parking_{i}", value=0.0, placeholder="0.00"))
+                        lodging.append(number_text_input(f"Lodging Day {i+1}", key=f"lodging_{i}", value=0.0, placeholder="0.00"))
+                        baggage.append(number_text_input(f"Baggage Day {i+1}", key=f"baggage_{i}", value=0.0, placeholder="0.00"))
 
             # Descriptions next (always shown above misc rows, once for the section)
             misc_desc1 = st.text_input("Misc Description 1", key="misc_desc1", placeholder="e.g., Registration")
@@ -1079,8 +1097,8 @@ def main():
                 for offset in range(chunk_len):
                     i = chunk_start + offset
                     with cols[offset]:
-                        misc.append(st.number_input(f"Misc Row 1 Day {i+1}", min_value=0.0, value=0.0, step=1.0, key=f"misc_{i}", format="%.2f"))
-                        misc2.append(st.number_input(f"Misc Row 2 Day {i+1}", min_value=0.0, value=0.0, step=1.0, key=f"misc2_{i}", format="%.2f"))
+                        misc.append(number_text_input(f"Misc Row 1 Day {i+1}", key=f"misc_{i}", value=0.0, placeholder="0.00"))
+                        misc2.append(number_text_input(f"Misc Row 2 Day {i+1}", key=f"misc2_{i}", value=0.0, placeholder="0.00"))
             
             
             st.header("Meals and Incidentals Per Diem")
