@@ -486,14 +486,13 @@ def create_pdf(form_data, ws):
     misc = form_data.get('misc', [])
     misc2 = form_data.get('misc2', [])  # Second row for misc expenses
     
-    # Build labels; if blank, keep the default "Miscellaneous/Other (Provide Description)"
-    default_misc_label = 'Miscellaneous/Other\n(Provide Description)'
-    misc_desc1_val = form_data.get('misc_desc1', '')
-    misc_desc2_val = form_data.get('misc_desc2', '')
+    # Build labels; only use if descriptions are actually provided
+    misc_desc1_val = form_data.get('misc_desc1', '').strip() if form_data.get('misc_desc1', '') else ''
+    misc_desc2_val = form_data.get('misc_desc2', '').strip() if form_data.get('misc_desc2', '') else ''
     
-    # Build labels; if blank, keep the default "Miscellaneous/Other (Provide Description)"
-    misc_label1 = misc_desc1_val.strip() if (misc_desc1_val and misc_desc1_val.strip()) else default_misc_label
-    misc_label2 = misc_desc2_val.strip() if (misc_desc2_val and misc_desc2_val.strip()) else default_misc_label
+    # Only show misc rows that have actual descriptions
+    misc_label1 = misc_desc1_val if misc_desc1_val else None
+    misc_label2 = misc_desc2_val if misc_desc2_val else None
     
     # Grand totals across all days
     grand_af = sum(x for x in airfare if x)
@@ -517,6 +516,7 @@ def create_pdf(form_data, ws):
         bg = pad_to_length(baggage[i*7:(i+1)*7], pad_len, 0)
         m1 = pad_to_length(misc[i*7:(i+1)*7], pad_len, 0)
         m2 = pad_to_length(misc2[i*7:(i+1)*7], pad_len, 0)
+        # Build expenses data - only include misc rows if descriptions are provided
         expenses_data = [
             ['Date (MM/DD/YY)'] + pad_to_length(dates_chunk, 7, '') + ['Total'],
             ['Airfare'] + [f"${x:.2f}" if x else '' for x in af] + ([f"${grand_af:.2f}"] if i == total_expense_chunks - 1 else ['']),
@@ -525,11 +525,22 @@ def create_pdf(form_data, ws):
             ['Lodging'] + [f"${x:.2f}" if x else '' for x in lg] + ([f"${grand_lg:.2f}"] if i == total_expense_chunks - 1 else ['']),
             ['Baggage Fees'] + [f"${x:.2f}" if x else '' for x in bg] + ([f"${grand_bg:.2f}"] if i == total_expense_chunks - 1 else ['']),
             ['Miscellaneous/Other\n(Provide Description)'] + [''] * 7 + [''],
-            [misc_label1] + [f"${x:.2f}" if x else '' for x in m1] + ([f"${grand_m1:.2f}"] if i == total_expense_chunks - 1 else ['']),
-            [misc_label2] + [f"${x:.2f}" if x else '' for x in m2] + ([f"${grand_m2:.2f}"] if i == total_expense_chunks - 1 else ['']),
         ]
+        
+        # Only add misc rows if descriptions are provided
+        misc_row1_idx = None
+        misc_row2_idx = None
+        if misc_label1 is not None:
+            expenses_data.append([misc_label1] + [f"${x:.2f}" if x else '' for x in m1] + ([f"${grand_m1:.2f}"] if i == total_expense_chunks - 1 else ['']))
+            misc_row1_idx = len(expenses_data) - 1
+        if misc_label2 is not None:
+            expenses_data.append([misc_label2] + [f"${x:.2f}" if x else '' for x in m2] + ([f"${grand_m2:.2f}"] if i == total_expense_chunks - 1 else ['']))
+            misc_row2_idx = len(expenses_data) - 1
+        
         expenses_table = Table(expenses_data, colWidths=[1.3*inch] + [0.65*inch]*7 + [0.75*inch])
-        expenses_table.setStyle(TableStyle([
+        
+        # Build table style - dynamically handle misc rows
+        table_style = [
             # Left label column light gray; headers white
             ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#E0E0E0')),
             ('BACKGROUND', (0, 0), (-1, 0), colors.white),
@@ -543,25 +554,44 @@ def create_pdf(form_data, ws):
             ('SPAN', (0, 6), (7, 6)),  # Span across all day columns
             ('TEXTCOLOR', (0, 6), (0, 6), colors.black),
             ('BACKGROUND', (0, 6), (7, 6), colors.white),
-            # Misc rows (rows 7-8)
-            ('TEXTCOLOR', (0, 7), (0, 8), colors.black),
-            ('BACKGROUND', (0, 7), (0, 8), colors.HexColor('#E0E0E0')),
-            ('TEXTCOLOR', (1, 7), (7, 8), colors.red),
-            ('BACKGROUND', (1, 7), (7, 8), colors.HexColor('#FFF5F5')),
-            ('TEXTCOLOR', (8, 7), (8, 8), colors.red),
-            ('BACKGROUND', (8, 7), (8, 8), colors.HexColor('#FFF5F5')),
-            # Totals column (rows 1-8)
-            ('TEXTCOLOR', (8, 1), (8, 8), colors.red),
-            ('BACKGROUND', (8, 1), (8, 8), colors.HexColor('#FFF5F5')),
+        ]
+        
+        # Add styling for misc rows only if they exist
+        if misc_row1_idx is not None:
+            table_style.extend([
+                ('TEXTCOLOR', (0, misc_row1_idx), (0, misc_row1_idx), colors.black),
+                ('BACKGROUND', (0, misc_row1_idx), (0, misc_row1_idx), colors.HexColor('#E0E0E0')),
+                ('TEXTCOLOR', (1, misc_row1_idx), (7, misc_row1_idx), colors.red),
+                ('BACKGROUND', (1, misc_row1_idx), (7, misc_row1_idx), colors.HexColor('#FFF5F5')),
+                ('TEXTCOLOR', (8, misc_row1_idx), (8, misc_row1_idx), colors.red),
+                ('BACKGROUND', (8, misc_row1_idx), (8, misc_row1_idx), colors.HexColor('#FFF5F5')),
+            ])
+        if misc_row2_idx is not None:
+            table_style.extend([
+                ('TEXTCOLOR', (0, misc_row2_idx), (0, misc_row2_idx), colors.black),
+                ('BACKGROUND', (0, misc_row2_idx), (0, misc_row2_idx), colors.HexColor('#E0E0E0')),
+                ('TEXTCOLOR', (1, misc_row2_idx), (7, misc_row2_idx), colors.red),
+                ('BACKGROUND', (1, misc_row2_idx), (7, misc_row2_idx), colors.HexColor('#FFF5F5')),
+                ('TEXTCOLOR', (8, misc_row2_idx), (8, misc_row2_idx), colors.red),
+                ('BACKGROUND', (8, misc_row2_idx), (8, misc_row2_idx), colors.HexColor('#FFF5F5')),
+            ])
+        
+        # Add common styling for totals column
+        last_row = len(expenses_data) - 1
+        table_style.extend([
+            ('TEXTCOLOR', (8, 1), (8, last_row), colors.red),
+            ('BACKGROUND', (8, 1), (8, last_row), colors.HexColor('#FFF5F5')),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
             ('ALIGN', (0, 0), (0, -1), 'LEFT'),
             ('ALIGN', (1, 0), (7, -1), 'CENTER'),
-            ('ALIGN', (8, 0), (8, 10), 'CENTER'),
+            ('ALIGN', (8, 0), (8, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 0), (-1, -1), 8),
             ('FONTSIZE', (0, 0), (-1, 0), 9),
-        ]))
+        ])
+        
+        expenses_table.setStyle(TableStyle(table_style))
         expense_tables.append(expenses_table)
     for t in expense_tables:
         story.append(t)
