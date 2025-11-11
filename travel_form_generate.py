@@ -935,7 +935,7 @@ def create_pdf(form_data, ws):
 
 def main():
     # Header with logo and title
-    col_logo, col_title = st.columns([1, 4])
+    col_logo, col_title, col_spacer = st.columns([1,4,1], gap="large")
     with col_logo:
         try:
             georgetown_logo_url = 'https://raw.githubusercontent.com/JiaqinWu/HRSA64_Dash/main/Georgetown_logo_blueRGB.png'
@@ -944,6 +944,8 @@ def main():
             pass
     with col_title:
         st.markdown("<h1 style='text-align: center;'>Georgetown Domestic Travel Authorization Form Generator</h1>", unsafe_allow_html=True)
+    with col_spacer:
+        pass
     
     st.markdown("Fill out the form below to generate your Georgetown domestic travel authorization form.")
     
@@ -1073,7 +1075,7 @@ def main():
                     i = chunk_start + offset
                     with cols[offset]:
                         mileage_dates.append(st.text_input(f"Day {i+1}", key=f"mileage_date_{i}", placeholder="MM/DD/YY"))
-                        mileage_amounts.append(number_text_input(f"Miles Day {i+1}", key=f"mileage_{i}", value=0.0, placeholder="0"))
+                        mileage_amounts.append(number_text_input(f"Miles", key=f"mileage_{i}", value=0.0, placeholder="0"))
             
             total_mileage = sum([m * 0.70 for m in mileage_amounts if m])
             
@@ -1102,6 +1104,15 @@ def main():
 
             # Descriptions next (always shown above misc rows, once for the section)
             misc_desc1 = st.text_input("Miscellaneous/Other Description 1", key="misc_desc1", placeholder="e.g., Registration")
+            # Second pass: render Misc Row 1 and Misc Row 2 amounts
+            for chunk_start in range(0, total_days, 7):
+                chunk_len = min(7, total_days - chunk_start)
+                cols = st.columns(chunk_len)
+                for offset in range(chunk_len):
+                    i = chunk_start + offset
+                    with cols[offset]:
+                        misc.append(number_text_input(f"{misc_desc1} Day {i+1}", key=f"misc_{i}", value=0.0, placeholder="0.00"))
+
             misc_desc2 = st.text_input("Miscellaneous/Other Description 2", key="misc_desc2", placeholder="e.g., Supplies")
 
             # Second pass: render Misc Row 1 and Misc Row 2 amounts
@@ -1111,7 +1122,6 @@ def main():
                 for offset in range(chunk_len):
                     i = chunk_start + offset
                     with cols[offset]:
-                        misc.append(number_text_input(f"{misc_desc1} Day {i+1}", key=f"misc_{i}", value=0.0, placeholder="0.00"))
                         misc2.append(number_text_input(f"{misc_desc2} Day {i+1}", key=f"misc2_{i}", value=0.0, placeholder="0.00"))
             
             
