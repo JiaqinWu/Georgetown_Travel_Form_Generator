@@ -467,7 +467,7 @@ def create_pdf(form_data, ws):
         for amount in amounts_chunk:
             if amount and str(amount).strip():
                 try:
-                    rate = round(float(amount) * 0.70, 2)
+                    rate = round(float(amount) * 0.70, 0)
                     mileage_rates.append(f"${rate:.2f}")
                 except:
                     mileage_rates.append('')
@@ -1085,7 +1085,7 @@ def main():
                         mileage_dates.append(st.text_input(f"Day {i+1}", key=f"mileage_date_{i}", placeholder="MM/DD/YY"))
                         mileage_amounts.append(number_text_input(f"Miles", key=f"mileage_{i}", value=0.0, placeholder="0"))
             
-            total_mileage = sum([m * 0.70 for m in mileage_amounts if m])
+            total_mileage = round(sum([m * 0.70 for m in mileage_amounts if m]),0)
             
             st.header("Travel Expenses")
             expense_dates = []
