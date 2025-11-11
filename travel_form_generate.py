@@ -359,9 +359,8 @@ def create_pdf(form_data, ws):
     right_logo = load_logo_image(advance_logo_url, target_height_inch=0.4)
 
     title_para = Paragraph("Domestic Travel Authorization Form", title_style)
-    subtitle_para = Paragraph("(Meeting Participants, Consultants, and TA Providers)", subtitle_style)
 
-    title_block = [[title_para], [subtitle_para]]
+    title_block = [[title_para]]
     title_table = Table(title_block)
     title_table.setStyle(TableStyle([
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -394,28 +393,11 @@ def create_pdf(form_data, ws):
     story.append(header_table)
     # Thin rule below header
     story.append(Spacer(1, 0.05*inch))
-    story.append(Table([["" ]], colWidths=[content_width], rowHeights=[0.5]))
-    story.append(Spacer(1, 0.07*inch))
-    
-    # Instruction box - smaller version
-    instruction_style = ParagraphStyle(
-        'InstructionStyle',
-        parent=styles['Normal'],
-        fontSize=7,
-        textColor=colors.HexColor('#000000'),
-        spaceAfter=6,
-        leftIndent=10,
-        rightIndent=10,
-    )
-    story.append(Spacer(1, 0.05*inch))
-    instruction_text = "Fill out the fields highlighted in red only (if applicable). After form is completed: save form as PDF, sign/date, attach receipts, and email all documents."
-    story.append(Paragraph(instruction_text, instruction_style))
+    story.append(Table([["" ]], colWidths=[content_width], rowHeights=[0.5]))    
     story.append(Spacer(1, 0.1*inch))
     
     # Traveler Information Section
     story.append(Paragraph("<b>Traveler Information</b>", styles['Heading2']))
-    story.append(Paragraph("The below name/address fields are for the name/address as it should appear in your Supplier ID registration.", 
-                          styles['Normal']))
     story.append(Spacer(1, 0.1*inch))
     
     # Create traveler info table
@@ -453,9 +435,7 @@ def create_pdf(form_data, ws):
     
     # Mileage Section
     story.append(Paragraph("<b>Mileage</b>", styles['Heading3']))
-    story.append(Paragraph("Please submit mileage documentation (Google Maps or Mapquest)", styles['Normal']))
     story.append(Paragraph("Mileage for 2025 is $0.70 per mile.", styles['Normal']))
-    story.append(Paragraph("The Mileage (Per Day) should be rounded to the nearest mile.", styles['Normal']))
     story.append(Spacer(1, 0.1*inch))
     
     # Mileage: build multiple tables, 7 days per table
@@ -466,7 +446,7 @@ def create_pdf(form_data, ws):
     for amount in all_mileage_amounts:
         if amount and str(amount).strip():
             try:
-                grand_mileage_rate_total += round(float(amount) * 0.70, 2)
+                grand_mileage_rate_total += round(float(amount) * 0.70, 0)
             except:
                 pass
     mileage_tables = []
@@ -501,10 +481,9 @@ def create_pdf(form_data, ws):
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
             ('BACKGROUND', (1, 0), (7, 0), colors.white),
             ('TEXTCOLOR', (1, 0), (7, 0), colors.black),
-            # Editable cells keep soft red highlight
-            ('TEXTCOLOR', (1, 1), (7, 1), colors.red),  # Red for input values (mileage amount row)
+            ('TEXTCOLOR', (1, 1), (7, 1), colors.red), 
             ('BACKGROUND', (1, 1), (7, 1), colors.HexColor('#FFF5F5')),
-            ('TEXTCOLOR', (1, 2), (7, 2), colors.red),  # Red for mileage rate row
+            ('TEXTCOLOR', (1, 2), (7, 2), colors.red), 
             ('BACKGROUND', (1, 2), (7, 2), colors.HexColor('#FFF5F5')),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
@@ -522,7 +501,7 @@ def create_pdf(form_data, ws):
         story.append(Spacer(1, 0.15*inch))
     
     # Expenses Section - 7 days + total column
-    story.append(Paragraph("<b>Airfare, Transportation, Parking, Lodging, Misc.</b>", styles['Heading3']))
+    story.append(Paragraph("<b>Airfare, Transportation, Parking, Lodging, Miscellaneous.</b>", styles['Heading3']))
     story.append(Paragraph("Ground Transportation Includes: Taxi, Uber, etc.", styles['Normal']))
     story.append(Paragraph("Miscellaneous/Other: Pre-approved travel expenses not listed in this form", styles['Normal']))
     story.append(Spacer(1, 0.1*inch))
@@ -596,10 +575,8 @@ def create_pdf(form_data, ws):
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
             ('BACKGROUND', (1, 0), (7, 0), colors.white),
             ('TEXTCOLOR', (1, 0), (7, 0), colors.black),
-            # Value rows
             ('TEXTCOLOR', (1, 1), (7, 5), colors.red),
             ('BACKGROUND', (1, 1), (7, 5), colors.HexColor('#FFF5F5')),
-            # Miscellaneous/Other row (row 6) - match ADJUSTED PER DIEM style: spanned, lowercase, black
             ('SPAN', (0, 6), (7, 6)),  # Span across all day columns
             ('TEXTCOLOR', (0, 6), (0, 6), colors.black),
             ('BACKGROUND', (0, 6), (7, 6), colors.white),
@@ -648,8 +625,6 @@ def create_pdf(form_data, ws):
     
     # Meals and Incidentals Section
     story.append(Paragraph("<b>Meals and Incidentals Per Diem</b>", styles['Heading2']))
-    story.append(Paragraph("Per Diem is required.", styles['Normal']))
-    story.append(Paragraph("$5/Day incidentals provided to all travelers.", styles['Normal']))
     story.append(Paragraph("Federal Guidelines: On the first and last travel day, travelers are only eligible for 75 percent of the total M&IE rate.", styles['Normal']))
     story.append(Spacer(1, 0.1*inch))
     
@@ -836,12 +811,14 @@ def create_pdf(form_data, ws):
     ]))
     story.append(totals_table)
     story.append(Spacer(1, 0.15*inch))
-    
+
+
+    story.append(Paragraph("<b>Approval Signatures</b>", styles['Heading2']))
     # Signature section
     signature_text = form_data.get('signature', '').strip()
     
-    # Create signature table with image or text
-    signature_cells = ['Traveler Signature:', '', 'DATE', form_data.get('signature_date', '')]
+    # Create signature cell with image or text
+    signature_cell_value = ''
     
     # Generate signature image from text
     if signature_text:
@@ -883,66 +860,45 @@ def create_pdf(form_data, ws):
                 # Create ReportLab Image - use the calculated dimensions
                 # The image will be high-res internally but displayed at the correct size
                 signature_img = Image(img_buffer, width=new_width, height=new_height)
-                signature_cells[1] = signature_img
+                signature_cell_value = signature_img
             else:
-                signature_cells[1] = signature_text
+                signature_cell_value = signature_text
         except Exception as e:
             # Fallback to text if image generation fails
-            signature_cells[1] = signature_text
-    else:
-        signature_cells[1] = ''
+            signature_cell_value = signature_text
     
-    signature_data = [signature_cells]
-    signature_table = Table(signature_data, colWidths=[1.5*inch, 2*inch, 0.8*inch, 1.5*inch])
-    signature_table.setStyle(TableStyle([
+    # Combined Approval Signatures and Operations Use Only table
+    combined_data = [
+        ['Traveler Signature:', signature_cell_value, 'DATE', form_data.get('signature_date', '')],
+        ['Program Assistant', '', 'DATE', ''],
+        ['Lead Technical Assistance Provider', '', 'DATE', ''],
+        ['AWD', 'AWD-7776588', 'GR', 'GR426936'],
+    ]
+    
+    combined_table = Table(combined_data, colWidths=[1.5*inch, 2*inch, 0.8*inch, 1.5*inch])
+    combined_table.setStyle(TableStyle([
+        # Grid and alignment for all rows
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        # Padding for all rows
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        # Traveler Signature row (row 0) - label columns gray, signature/date cells red text
         ('BACKGROUND', (0, 0), (0, 0), colors.HexColor('#E0E0E0')),
         ('BACKGROUND', (2, 0), (2, 0), colors.HexColor('#E0E0E0')),
         ('TEXTCOLOR', (1, 0), (1, 0), colors.red),
         ('TEXTCOLOR', (3, 0), (3, 0), colors.red),
         ('BACKGROUND', (1, 0), (1, 0), colors.white),
         ('BACKGROUND', (3, 0), (3, 0), colors.white),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('VALIGN', (0, 0), (0, 0), 'MIDDLE'),
-        ('VALIGN', (1, 0), (1, 0), 'MIDDLE'),
-        ('VALIGN', (2, 0), (2, 0), 'MIDDLE'),
-        ('VALIGN', (3, 0), (3, 0), 'MIDDLE'),
-        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        # Operations rows (rows 1-3) - all white background
+        ('BACKGROUND', (0, 1), (-1, 3), colors.white),
     ]))
-    story.append(signature_table)
-    story.append(Spacer(1, 0.15*inch))
-    
-    # OPERATIONS USE ONLY Section
-    ops_style = ParagraphStyle(
-        'OpsStyle',
-        parent=styles['Normal'],
-        fontSize=9,
-        textColor=colors.HexColor('#000000'),
-        spaceAfter=6,
-    )
-    story.append(Paragraph("<b>OPERATIONS USE ONLY (Below THIS Line)</b>", ops_style))
-    story.append(Spacer(1, 0.1*inch))
-    
-    ops_data = [
-        ['Program Assistant', '', 'DATE', ''],
-        ['Program Manager', '', 'DATE', ''],
-        ['AWD', 'AWD-7776588', 'GR', 'GR426936'],
-    ]
-    ops_table = Table(ops_data, colWidths=[1.5*inch, 2*inch, 0.8*inch, 1.5*inch])
-    ops_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.white),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ('TOPPADDING', (0, 0), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ('LEFTPADDING', (0, 0), (-1, -1), 6),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-    ]))
-    story.append(ops_table)
+    story.append(combined_table)
     
     # Build PDF
     doc.build(story)
