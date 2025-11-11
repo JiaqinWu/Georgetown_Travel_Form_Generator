@@ -451,6 +451,7 @@ def create_pdf(form_data, ws):
                 grand_mileage_rate_total += round(float(amount) * 0.70, 0)
             except:
                 pass
+    grand_mileage_rate_total = round(grand_mileage_rate_total, 0)
     mileage_tables = []
     mileage_dates_chunks = chunk_list(all_mileage_dates, 7)
     mileage_amount_chunks = chunk_list(all_mileage_amounts, 7)
@@ -468,13 +469,13 @@ def create_pdf(form_data, ws):
             if amount and str(amount).strip():
                 try:
                     rate = round(float(amount) * 0.70, 0)
-                    mileage_rates.append(f"${rate:.2f}")
+                    mileage_rates.append(f"${int(rate)}")
                 except:
                     mileage_rates.append('')
             else:
                 mileage_rates.append('')
         # Only last table shows grand total; others blank
-        mileage_total_cell = f"${grand_mileage_rate_total:.2f}" if idx == total_mileage_chunks - 1 else ''
+        mileage_total_cell = f"${int(grand_mileage_rate_total)}" if idx == total_mileage_chunks - 1 else ''
         mileage_data.append(['Mileage Rate'] + mileage_rates + [mileage_total_cell])
         mileage_table = Table(mileage_data, colWidths=[1.3*inch] + [0.7*inch]*7 + [0.75*inch])
         mileage_table.setStyle(TableStyle([
@@ -800,7 +801,7 @@ def create_pdf(form_data, ws):
     story.append(Paragraph("<b>Sub-Totals</b>", styles['Heading3']))
 
     totals_data = [
-        ['Mileage', f"${total_mileage:.2f}"],
+        ['Mileage', f"${int(total_mileage)}"],
         ['Airfare', f"${total_airfare:.2f}"],
         ['Ground Transportation', f"${total_ground_transport:.2f}"],
         ['Parking', f"${total_parking:.2f}"],
@@ -1367,7 +1368,7 @@ def main():
                 </tr>
               </thead>
               <tbody>
-                <tr><td style='padding:8px;border-bottom:1px solid #f0f0f0;'>Mileage</td><td style='padding:8px;text-align:right;'>${review.get('total_mileage',0):.2f}</td></tr>
+                <tr><td style='padding:8px;border-bottom:1px solid #f0f0f0;'>Mileage</td><td style='padding:8px;text-align:right;'>${int(review.get('total_mileage',0))}</td></tr>
                 <tr><td style='padding:8px;border-bottom:1px solid #f0f0f0;'>Airfare</td><td style='padding:8px;text-align:right;'>${review.get('total_airfare',0):.2f}</td></tr>
                 <tr><td style='padding:8px;border-bottom:1px solid #f0f0f0;'>Ground Transport</td><td style='padding:8px;text-align:right;'>${review.get('total_ground_transport',0):.2f}</td></tr>
                 <tr><td style='padding:8px;border-bottom:1px solid #f0f0f0;'>Parking</td><td style='padding:8px;text-align:right;'>${review.get('total_parking',0):.2f}</td></tr>
