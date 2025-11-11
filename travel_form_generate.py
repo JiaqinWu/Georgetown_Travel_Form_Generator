@@ -705,12 +705,30 @@ def create_pdf(form_data, ws):
         red = pad_to_length(total_reductions[idx_start:idx_start+7], 7, 0.0)
         meal_tot = pad_to_length(daily_meal_totals[idx_start:idx_start+7], 7, 0.0)
         adj = pad_to_length(adjusted_per_diem[idx_start:idx_start+7], 7, 0.0)
-        # Determine labels for deductions in this chunk: if all amounts equal, show that dollar; otherwise generic label
-        chunk_amounts = amounts
+        # Determine labels for deductions in this chunk: use the per diem amount from actual dates
+        # Find the first per diem amount that corresponds to a date (non-empty date)
         common_amount = None
-        if len(set([int(x) if x else 0 for x in chunk_amounts])) == 1:
-            common_amount = int(chunk_amounts[0]) if chunk_amounts and chunk_amounts[0] else None
-        if common_amount and common_amount in meal_deductions:
+        for j in range(len(pd)):
+            if pd[j] and str(pd[j]).strip() and j < len(amounts) and amounts[j]:
+                try:
+                    common_amount = int(amounts[j])
+                    break
+                except (ValueError, TypeError):
+                    continue
+        # If no date found in this chunk, try to get from the actual per_diem_amounts (not padded)
+        if common_amount is None and idx_start < len(per_diem_amounts):
+            for j in range(idx_start, min(idx_start + 7, len(per_diem_amounts))):
+                if j < len(per_diem_dates) and per_diem_dates[j] and str(per_diem_dates[j]).strip():
+                    try:
+                        common_amount = int(per_diem_amounts[j])
+                        break
+                    except (ValueError, TypeError):
+                        continue
+        # Default to 80 if still not found
+        if common_amount is None:
+            common_amount = 80
+        
+        if common_amount in meal_deductions:
             b_lbl = f"Breakfast -${meal_deductions[common_amount]['breakfast']}"
             l_lbl = f"Lunch -${meal_deductions[common_amount]['lunch']}"
             d_lbl = f"Dinner -${meal_deductions[common_amount]['dinner']}"
@@ -868,10 +886,13 @@ def create_pdf(form_data, ws):
             signature_cell_value = signature_text
     
     # Combined Approval Signatures and Operations Use Only table
+    # Use Paragraph for "Lead Technical Assistance Provider" to make it two lines
+    lead_provider_text = Paragraph("Lead Technical<br/>Assistance Provider", styles['Normal'])
+    
     combined_data = [
         ['Traveler Signature:', signature_cell_value, 'DATE', form_data.get('signature_date', '')],
         ['Program Assistant', '', 'DATE', ''],
-        ['Lead Technical Assistance Provider', '', 'DATE', ''],
+        [lead_provider_text, '', 'DATE', ''],
         ['AWD', 'AWD-7776588', 'GR', 'GR426936'],
     ]
     
@@ -888,13 +909,10 @@ def create_pdf(form_data, ws):
         ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
         ('LEFTPADDING', (0, 0), (-1, -1), 6),
         ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-        # Traveler Signature row (row 0) - label columns gray, signature/date cells red text
-        ('BACKGROUND', (0, 0), (0, 0), colors.HexColor('#E0E0E0')),
-        ('BACKGROUND', (2, 0), (2, 0), colors.HexColor('#E0E0E0')),
+        # Traveler Signature row (row 0) - all white background, signature/date cells red text
+        ('BACKGROUND', (0, 0), (-1, 0), colors.white),
         ('TEXTCOLOR', (1, 0), (1, 0), colors.red),
         ('TEXTCOLOR', (3, 0), (3, 0), colors.red),
-        ('BACKGROUND', (1, 0), (1, 0), colors.white),
-        ('BACKGROUND', (3, 0), (3, 0), colors.white),
         # Operations rows (rows 1-3) - all white background
         ('BACKGROUND', (0, 1), (-1, 3), colors.white),
     ]))
