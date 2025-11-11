@@ -428,6 +428,9 @@ def create_pdf(form_data, ws):
     ]))
     story.append(traveler_table)
     story.append(Spacer(1, 0.15*inch))
+    # Traveler Paid Expenses Section
+    story.append(Paragraph("<b>Purpose of Travel</b>", styles['Heading2']))
+    story.append(Spacer(1, 0.15*inch))
     
     # Traveler Paid Expenses Section
     story.append(Paragraph("<b>Traveler Paid Expenses</b>", styles['Heading2']))
@@ -480,8 +483,10 @@ def create_pdf(form_data, ws):
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
             ('BACKGROUND', (1, 0), (7, 0), colors.white),
             ('TEXTCOLOR', (1, 0), (7, 0), colors.black),
+            ('BACKGROUND', (0, 1), (0, 1), colors.HexColor('#E0E0E0')),
             ('TEXTCOLOR', (1, 1), (7, 1), colors.red), 
             ('BACKGROUND', (1, 1), (7, 1), colors.HexColor('#FFF5F5')),
+            ('BACKGROUND', (0, 2), (0, 2), colors.HexColor('#E0E0E0')),
             ('TEXTCOLOR', (1, 2), (7, 2), colors.red), 
             ('BACKGROUND', (1, 2), (7, 2), colors.HexColor('#FFF5F5')),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
@@ -853,9 +858,10 @@ def create_pdf(form_data, ws):
                         rgb_img.paste(signature_img_pil)
                     signature_img_pil = rgb_img
                 
-                # Resize signature to fit the table cell (max width ~2 inches, max height ~0.6 inch)
-                max_width = 1.8 * inch
-                max_height = 0.6 * inch
+                # Resize signature to fit the table cell (cell width is 2 inches, accounting for padding)
+                # Cell has 6pt left/right padding, so available width is ~1.88 inches
+                max_width = 1.88 * inch
+                max_height = 0.5 * inch  # Reduced height to fit better in cell
                 
                 img_width, img_height = signature_img_pil.size
                 aspect_ratio = img_height / img_width if img_width > 0 else 1
@@ -867,6 +873,9 @@ def create_pdf(form_data, ws):
                 if new_height > max_height:
                     new_height = max_height
                     new_width = new_height / aspect_ratio
+                
+                # Ensure width doesn't exceed cell width
+                new_width = min(new_width, max_width)
                 
                 # Save to buffer for ReportLab with high quality
                 img_buffer = io.BytesIO()
