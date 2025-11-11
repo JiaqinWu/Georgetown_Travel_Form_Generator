@@ -403,7 +403,6 @@ def create_pdf(form_data, ws):
     # Create traveler info table
     traveler_data = [
         ['Name', form_data.get('name', ''), 'Organization', form_data.get('organization', 'Georgetown University')],
-        ['GU Supplier ID (if applicable)', form_data.get('supplier_id', ''), 'Purpose of Travel', form_data.get('purpose', '')],
         ['Address Line 1', form_data.get('address1', ''), 'Destination', form_data.get('destination', '')],
         ['Address Line 2', form_data.get('address2', ''), 'Departure Date', form_data.get('departure_date', '')],
         ['City', form_data.get('city', ''), 'Return Date', form_data.get('return_date', '')],
@@ -1194,8 +1193,6 @@ def main():
                 missing_fields.append("State")
             if not zip_code or not zip_code.strip():
                 missing_fields.append("Zip")
-            if not purpose or not purpose.strip():
-                missing_fields.append("Purpose of Travel")
             if not destination or not destination.strip():
                 missing_fields.append("Destination")
             if not email or not email.strip():
@@ -1271,14 +1268,12 @@ def main():
             
             form_data = {
                 'name': name,
-                'supplier_id': supplier_id,
                 'address1': address1,
                 'address2': address2,
                 'city': city,
                 'state': state,
                 'zip': zip_code,
                 'organization': organization,
-                'purpose': purpose,
                 'destination': destination,
                 'departure_date': departure_date.strftime('%m/%d/%Y') if departure_date else '',
                 'return_date': return_date.strftime('%m/%d/%Y') if return_date else '',
@@ -1330,9 +1325,6 @@ def main():
                   </div>
                   <div style='display:flex;justify-content:space-between;padding:4px 0;'>
                     <span style='color:#555;'>Organization</span><strong>{review.get('organization','')}</strong>
-                  </div>
-                  <div style='display:flex;justify-content:space-between;padding:4px 0;'>
-                    <span style='color:#555;'>Purpose</span><strong>{review.get('purpose','')}</strong>
                   </div>
                   <div style='display:flex;justify-content:space-between;padding:4px 0;'>
                     <span style='color:#555;'>Destination</span><strong>{review.get('destination','')}</strong>
