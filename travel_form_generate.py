@@ -886,12 +886,22 @@ def create_pdf(form_data, ws):
             signature_cell_value = signature_text
     
     # Combined Approval Signatures and Operations Use Only table
-    # Use Paragraph for "Lead Technical Assistance Provider" to make it two lines
-    lead_provider_text = Paragraph("Lead Technical<br/>Assistance Provider", styles['Normal'])
+    # Use Paragraph for all labels to ensure consistent font size and width
+    label_style = ParagraphStyle(
+        'LabelStyle',
+        parent=styles['Normal'],
+        fontSize=9,
+        fontName='Helvetica',
+        alignment=0,  # LEFT
+    )
+    
+    traveler_label = Paragraph("Traveler Signature", label_style)
+    program_assistant_label = Paragraph("Program Assistant", label_style)
+    lead_provider_text = Paragraph("Lead Technical\nAssistance Provider", label_style)
     
     combined_data = [
-        ['Traveler Signature:', signature_cell_value, 'DATE', form_data.get('signature_date', '')],
-        ['Program Assistant', '', 'DATE', ''],
+        [traveler_label, signature_cell_value, 'DATE', form_data.get('signature_date', '')],
+        [program_assistant_label, '', 'DATE', ''],
         [lead_provider_text, '', 'DATE', ''],
         ['AWD', 'AWD-7776588', 'GR', 'GR426936'],
     ]
@@ -925,7 +935,7 @@ def create_pdf(form_data, ws):
 
 def main():
     # Header with logo and title
-    col_logo, col_title, col_spacer = st.columns([1, 3, 1])
+    col_logo, col_title = st.columns([1, 4])
     with col_logo:
         try:
             georgetown_logo_url = 'https://raw.githubusercontent.com/JiaqinWu/HRSA64_Dash/main/Georgetown_logo_blueRGB.png'
@@ -934,8 +944,6 @@ def main():
             pass
     with col_title:
         st.markdown("<h1 style='text-align: center;'>Georgetown Domestic Travel Authorization Form Generator</h1>", unsafe_allow_html=True)
-    with col_spacer:
-        pass
     
     st.markdown("Fill out the form below to generate your Georgetown domestic travel authorization form.")
     
@@ -956,7 +964,7 @@ def main():
 
             Please attach documentation for the specified mileage in your GMS Expense report (e.g., Google Maps, MapQuest). Round all mileage to the nearest mile.
 
-            ### Airfare, Transportation, Parking, Lodging, Baggage Fees, Misc./Other
+            ### Airfare, Transportation, Parking, Lodging, Baggage Fees, Miscellaneous/Other
             - **Airfare**: Should be booked through Concur and paid by Georgetown University. Include it as a cost in this Travel Authorization Form; your airfare should be included as an expense in your GMS Expense Report, but not as a personal reimbursement. If you are being reimbursed for your air travel, you must submit your itinerary and receipt.
             - **Ground Transportation**: Covers reasonable expenses for taxis or other modes of transportation to and from airports and/or train and bus stations. Receipts must indicate the point of departure and point of arrival.
             - **Parking**: If you are being reimbursed for parking, you must submit your receipt(s).
@@ -1036,19 +1044,20 @@ def main():
             col1, col2 = st.columns(2)
             
             with col1:
-                name = st.text_input("Name *", key="name")              
+                name = st.text_input("Name *", key="name")
+                organization = st.text_input("Organization", value="Georgetown University", key="organization")
+                destination = st.text_input("Destination *", key="destination")
+                email = st.text_input("Email Address *", key="email")              
+                
+            
+            with col2:
                 address1 = st.text_input("Address Line 1 *", key="address1")
                 address2 = st.text_input("Address Line 2", key="address2")
                 city = st.text_input("City *", key="city")
                 state = st.text_input("State *", key="state")
                 zip_code = st.text_input("Zip *", key="zip")
-            
-            with col2:
-                organization = st.text_input("Organization", value="Georgetown University", key="organization")
-                supplier_id = st.text_input("GU Supplier ID (if applicable)", key="supplier_id")
-                purpose = st.text_input("Purpose of Travel *", key="purpose")
-                destination = st.text_input("Destination *", key="destination")
-                email = st.text_input("Email Address *", key="email")
+
+            st.header("Purpose of Travel")
             
             st.header("Mileage Expenses")
             st.markdown("**Mileage rate for 2025: $0.70 per mile**")
@@ -1085,15 +1094,15 @@ def main():
                     i = chunk_start + offset
                     with cols[offset]:
                         expense_dates.append(st.text_input(f"Day {i+1}", key=f"expense_date_{i}", placeholder="MM/DD/YY"))
-                        airfare.append(number_text_input(f"Airfare Day {i+1}", key=f"airfare_{i}", value=0.0, placeholder="0.00"))
-                        ground_transport.append(number_text_input(f"Ground Trans Day {i+1}", key=f"ground_{i}", value=0.0, placeholder="0.00"))
-                        parking.append(number_text_input(f"Parking Day {i+1}", key=f"parking_{i}", value=0.0, placeholder="0.00"))
-                        lodging.append(number_text_input(f"Lodging Day {i+1}", key=f"lodging_{i}", value=0.0, placeholder="0.00"))
-                        baggage.append(number_text_input(f"Baggage Day {i+1}", key=f"baggage_{i}", value=0.0, placeholder="0.00"))
+                        airfare.append(number_text_input(f"Airfare", key=f"airfare_{i}", value=0.0, placeholder="0.00"))
+                        ground_transport.append(number_text_input(f"Ground Transportation", key=f"ground_{i}", value=0.0, placeholder="0.00"))
+                        parking.append(number_text_input(f"Parking", key=f"parking_{i}", value=0.0, placeholder="0.00"))
+                        lodging.append(number_text_input(f"Lodging", key=f"lodging_{i}", value=0.0, placeholder="0.00"))
+                        baggage.append(number_text_input(f"Baggage Fees", key=f"baggage_{i}", value=0.0, placeholder="0.00"))
 
             # Descriptions next (always shown above misc rows, once for the section)
-            misc_desc1 = st.text_input("Misc Description 1", key="misc_desc1", placeholder="e.g., Registration")
-            misc_desc2 = st.text_input("Misc Description 2", key="misc_desc2", placeholder="e.g., Supplies")
+            misc_desc1 = st.text_input("Miscellaneous/Other Description 1", key="misc_desc1", placeholder="e.g., Registration")
+            misc_desc2 = st.text_input("Miscellaneous/Other Description 2", key="misc_desc2", placeholder="e.g., Supplies")
 
             # Second pass: render Misc Row 1 and Misc Row 2 amounts
             for chunk_start in range(0, total_days, 7):
@@ -1102,14 +1111,12 @@ def main():
                 for offset in range(chunk_len):
                     i = chunk_start + offset
                     with cols[offset]:
-                        misc.append(number_text_input(f"Misc Row 1 Day {i+1}", key=f"misc_{i}", value=0.0, placeholder="0.00"))
-                        misc2.append(number_text_input(f"Misc Row 2 Day {i+1}", key=f"misc2_{i}", value=0.0, placeholder="0.00"))
+                        misc.append(number_text_input(f"{misc_desc1} Day {i+1}", key=f"misc_{i}", value=0.0, placeholder="0.00"))
+                        misc2.append(number_text_input(f"{misc_desc2} Day {i+1}", key=f"misc2_{i}", value=0.0, placeholder="0.00"))
             
             
             st.header("Meals and Incidentals Per Diem")
             st.markdown("**Please confirm the official GSA per diem rate for your travel destination at https://www.gsa.gov/travel/plan-book/per-diem-rates and select the corresponding rate below.**")
-            st.markdown("**$5/day incidentals included.**")
-            st.markdown("**Check boxes if meals were provided by Georgetown University**")
             # Single per diem selection for all days
             selected_per_diem = st.selectbox("Per Diem Rate (applies to all days)", options=[68,74,80,86,92], index=2, key="per_diem_base")
             per_diem_dates = []
@@ -1117,7 +1124,7 @@ def main():
             breakfast_checks = []
             lunch_checks = []
             dinner_checks = []
-            
+            st.markdown("**Check boxes if meals were provided by Georgetown University**")
             # Render per diem inputs in chunks of 7 days per row
             for chunk_start in range(0, total_days, 7):
                 chunk_len = min(7, total_days - chunk_start)
@@ -1126,10 +1133,10 @@ def main():
                     i = chunk_start + offset
                     with cols[offset]:
                         per_diem_dates.append(st.text_input(f"Day {i+1}", key=f"per_diem_date_{i}", placeholder="MM/DD/YY"))
-                        per_diem_amounts.append(selected_per_diem)  # Use same value for all days
-                        breakfast_checks.append(st.checkbox(f"Breakfast Day {i+1}", key=f"breakfast_{i}"))
-                        lunch_checks.append(st.checkbox(f"Lunch Day {i+1}", key=f"lunch_{i}"))
-                        dinner_checks.append(st.checkbox(f"Dinner Day {i+1}", key=f"dinner_{i}"))
+                        per_diem_amounts.append(selected_per_diem) 
+                        breakfast_checks.append(st.checkbox(f"Breakfast", key=f"breakfast_{i}"))
+                        lunch_checks.append(st.checkbox(f"Lunch", key=f"lunch_{i}"))
+                        dinner_checks.append(st.checkbox(f"Dinner", key=f"dinner_{i}"))
             
             st.header("Additional Information")
             
